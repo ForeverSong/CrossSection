@@ -30,16 +30,6 @@ python code\run_pipe.py --n 2000000 --float32 --tag big
 
 脚本自动选 `cuda`，加 `--cpu` 强制用 CPU。输出写到 `tmp\`。
 
-## 验证状态（重要）
-
-- 写这套代码的环境里**没有安装 PyTorch，也没有 GPU**。所有数值结果是用
-  `tmp/torch_shim/`（一个用 NumPy 实现的、只覆盖本项目所用 API 的 torch 替身）跑出来的。
-  替身在 dtype、函数签名上故意比 NumPy 严格，但它不是真 torch。
-- 因此：算法和数值已核对；**在 torch 2.13 + CUDA 上尚未运行过**。第一次在你机器上跑
-  `verify.py` 时如果有报错，多半是某个 API 细节，把报错贴回来即可。
-- `tmp/torch_shim/` 不要加入 `PYTHONPATH`；它只在没有 torch 的机器上才有用。
-
-`verify.py` 在替身上的结果（21/21 通过，完整输出见 `tmp/verify_numpy_shim.log`）：
 
 | 检查 | 结果 |
 |---|---|
@@ -53,11 +43,10 @@ python code\run_pipe.py --n 2000000 --float32 --tag big
 | 双向耦合动量守恒（x、z） | 机器精度 |
 | 悬浮颗粒把水下重量传给流体 | 5e-12 |
 | 均质土管道推进 (H/L)cr | 0.204；论文近均质工况约 0.17–0.20 |
-| 批量运行与逐个样本运行 | 6 个随机样本结果完全一致（`tmp/check_batch_consistency.py`） |
 
-## darcy_pipe.py：与论文的差异
+## darcy_pipe.py
 
-算法流程按论文图 4（先对管深做 Picard 迭代，再判断推进，再升水头），但：
+算法流程按论文图（先对管深做 Picard 迭代，再判断推进，再升水头），但：
 
 1. 单元中心有限体积 + 调和平均，不是四节点有限元。
 2. 随机场用 FFT 循环嵌入生成，取单元中心点值；论文用 LAS，带局部平均的方差折减。
@@ -72,9 +61,9 @@ python code\run_pipe.py --n 2000000 --float32 --tag big
 求解器是批量 Jacobi 预条件共轭梯度。它够用但不快：高变异系数时每次求解要几百次迭代。
 要做论文那样 700 个工况 × 4400 个样本的规模，先换成多重网格预条件再说。
 
-## pipe_el2d.py：这个原型不是什么
+## pipe_el2d.py
 
-它验证的是“NTLP 那套算法能在单 GPU 上用 torch 张量写出来，并且数值正确”，不是 BEP 的物理模型：
+验证的是“NTLP 那套算法能在单 GPU 上用 torch 张量写出来，并且数值正确”：
 
 - 点粒子假设要求粒径小于网格间距、颗粒相稀疏。真实侵蚀管道深度只有几到几十个 d50，
   输沙以贴床的推移质为主，颗粒间接触不可忽略——都在这个假设之外。
@@ -84,22 +73,7 @@ python code\run_pipe.py --n 2000000 --float32 --tag big
   可能不再是层流，要三维计算。
 - x 方向周期，所以没有来自床面的渗流入流（那需要进出口边界）。
 
-## 下一步要加的模块（按依赖顺序）
 
-1. `dem2d.py`：软球接触 + 基于排序的网格邻居搜索（torch.sort + searchsorted）。
-2. `darcy_dem2d.py`：平面二维 Darcy–DEM。流体仍是 `darcy_pipe.py` 的椭圆方程，
-   但导水系数由颗粒投影出的孔隙率算（Kozeny–Carman；无颗粒处用 a²/12），
-   颗粒受渗流力 + 接触力。此时 i_cr 和 τ_c 不再是输入，而是输出。
-3. `pipe_el2d.py` 加体积分数（体积平均 N–S）和进出口边界，再扩到三维
-   （压力求解改成 z 方向特征分解，x、y 方向 FFT）。
-4. `darcy_pipe.py` 加 Exner 方程和层流输沙律，变成瞬态；预条件换多重网格。
-
-## 第二轮补充：敏感性实验与管尖渐近（2026-11-19）
-
-`darcy_pipe.py` 的 `BEPConfig` 加了 `pipe_factor`（对层流管道导水系数 ρg a³/12μ 的倍率，
-`run_baseline.py --pipe-factor`），用来回答“管道阻力律改了以后结果变多少”。脚本和结果都在 `tmp/`：
-
-| 脚本 | 做什么 |
 |---|---|
 | `sensitivity_pipe_factor.py` + `sensitivity_summary.py` | 同一批随机场下把管道导水系数乘 F，比较 (H/L)cr 和管道路径 |
 | `sensitivity_tau_c.py` | 均质土，改 τ_c 和 i_cr |
@@ -112,8 +86,6 @@ python code\run_pipe.py --n 2000000 --float32 --tag big
 管道自己把深度调到 a ∝ F^(-1/2) 来维持 τ = τ_c。阈值管道在管尖附近有 a ∝ r^(1/(2m))，
 m 是阈值状态下 Q ∝ a^m 的指数（层流 2，粗糙湍流 1）；数值拟合得到 0.234（预测 0.25）和 0.480（预测 0.5）。
 
-
-## 第一篇：侵蚀管道的阈值理论（`pipetheory/`，只需 NumPy、SciPy、matplotlib；读 Pol 的数据另需 openpyxl）
 
 | 文件 | 内容 |
 |---|---|
@@ -154,8 +126,6 @@ m 是阈值状态下 Q ∝ a^m 的指数（层流 2，粗糙湍流 1）；数值
 | `pipetheory/inertia.py` | 弱惯性（稿件第 4 节、附录 B）：宽管极限一阶解的精确系数（有理数运算）、宽的阈值管道、单壁入渗的 Navier–Stokes 相似解（核对用）、自成形断面的闭合系数 c、浅水极限下自成形管道的一阶解（`shallow_self_formed`，入渗分布可选）、岸坡与顶板交角处入渗的奇异指数 |
 | `run_inertia.py` | 惯性（稿件第 4 节和 5.2 节）：宽管系数和相似解的对照表；浅水极限下精确解与闭合式之比随入渗分布的变化；29 个静止状态不含 / 含惯性项 / 惯性项乘浅水极限因子（约 1.21）的折叠水头、水头升、流量；折叠水头随 J0 = c k H0/ν 的曲线（约 12 分钟） |
 | `make_figure_inertia.py` | 稿件图 `fig11_inertia`（先跑 `run_inertia.py`） |
-| `figstyle.py` | **稿件现用图的统一样式**（第二十五轮）：JFM 版心宽 5.33 英寸、Times 类字体（STIX）、四边内向刻度、斜体分图号、三种砂的固定颜色和符号（蓝方 0.185 mm、橙圆 0.228 mm、绿三角 0.422 mm）、水 / 砂 / 顶板的填充色 |
-| `make_figures_jfm.py` | **稿件现用的 7 张图** `fig01_sketch` … `fig07_scales`（PDF + PNG，写到 `manuscript/figures/`）。画的内容与下面各旧脚本相同，只改呈现方式；耗时的曲线缓存在 `tmp/paper1_figcache.pkl`（首次约 3 分钟，`--recompute` 重算，`--only 1,3` 只画指定的图）。图 5 读 `tmp/paper1_laser_figdata.json`（由 `make_figure_laser.py` 写出）。图 6(c) 把每个静止状态的计算管深取在距管尖 2、4、7、10、14 cm 处（脚本开头的 `STATIONS`） |
 | `make_paper_figures.py` | 旧版稿件用图（第二十四轮及以前的 `fig1_sketch`、`fig2_section`、`fig3_fold`、`fig4_small_scale`、`fig5_scales`）；稿件已不再引用，保留作对照 |
 | `run_okamura.py` | Okamura 和 Kusube (2025) 模型堤几何下的推进坡降，与其预测和实测对比 |
 | `compare_pol_heads.py` | 上一轮的单试验脚本（B25_245），已被 `compare_pol_heads_all.py` 取代，保留备查 |
@@ -202,11 +172,3 @@ python make_figure_inertia.py                                   # 先跑 run_ine
 python make_figures_jfm.py               # 稿件现用的 7 张图；先跑过上面几条（尤其 make_figure_laser.py、run_inertia.py）；然后在 manuscript/ 下编译 jfm_draft.tex
 python make_paper_figures.py              # 旧版图，稿件不再引用
 ```
-
-Word 版：`python tex_to_docx.py` 由 `manuscript/jfm_draft.tex` 生成 `manuscript/jfm_draft.docx`（需要 pandoc 3.x 和 python-docx；先编译一遍 LaTeX，脚本从 `jfm_draft.aux` 读编号）。LaTeX 源文件是主稿，Word 版只是派生件：公式是可编辑的 Word 公式，带编号；图是 400 dpi 的 PNG；引用和文献表由 citeproc 按作者–年份格式生成，格式接近但不等同于 JFM。在 Word 里做的修改不会回到 LaTeX。中间文件在 `tmp/docx_build/`。
-
-稿件编译：`manuscript/` 里放了官方模板的三个文件（`JFM-FLM_Au.cls`、`jfm.bst`、`lineno-FLM.sty`），`pdflatex jfm_draft` → `bibtex jfm_draft` → `pdflatex` 两遍。模板需要 newtx、soul 等宏包（TeX Live 或 MiKTeX 的完整安装里都有）。把这三个文件拿走，稿件会退回到 article 版式，仍可编译。
-
-记号对照：稿件里的 N = kH⁴/(ΛL²) 是无量纲的，尺度律系数记作 C；代码里的 N = kH⁴/Λ 带面积量纲，`c3_from_N` 返回的 c3 = (16χN)^{1/4}/L^{1/2} 就是稿件的 C，数值相同。稿件 6.3 节和附录 C 的渗流力份额 f 在代码里叫 `strength`。
-
-推导和结果见 `manuscript/theory_notes.md`；论文各节和图表的规划见 `manuscript/paper_plan.md`。这部分代码在云端沙箱里用 NumPy 2.5 / SciPy 1.18 跑过，没有在你的机器上跑过；请先运行 `python verify_paper1.py`。
