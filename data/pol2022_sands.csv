@@ -1,0 +1,6 @@
+# Pol (2022) PhD thesis: d50 from Table 3.1; tau_eq = bed shear stress at equilibrium at the end of the tests (sec. 3.4.1,
+# computed by Pol as rho g a_avg i / 2 with the mean depth of the main channel); repose_deg = slope angle of the sand boil (Table 3.1).
+sand,d50_mm,tau_eq_Pa,repose_deg
+FPH,0.185,0.339,38.6
+B25,0.228,0.377,37.6
+FS35,0.422,0.476,36.7

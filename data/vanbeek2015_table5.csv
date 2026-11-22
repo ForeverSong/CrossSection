@@ -1,0 +1,19 @@
+# Van Beek, Van Essen, Vandenboer & Bezuijen (2015, Geotechnique 65, 740-754), Table 5: average pipe gradient p and measured flow Q
+# in equilibrium conditions (pipe at rest), with pipe length l and head H; k, box and hole from their Table 4 (Hanses 1985: sand A,
+# k and box not listed there -> blank).  Medium-scale box: W 0.881 m, L 1.385 m, D 0.403 m, hole 20.5 mm, total length 1.90 m
+# (Van Beek et al. 2022, Table 3).  E150: visualisation test in a 0.150 m wide box, L 0.344 m, D 0.100 m.
+test,scale,sand,d50_mm,k_m_per_s,l_m,H_m,p,Q_m3_per_s
+Hanses_26a,small,SandA,0.325,,0.250,0.130,0.089,3.98e-6
+Hanses_53,small,SandA,0.325,,0.165,0.214,0.092,2.01e-6
+Hanses_73,medium,SandA,0.325,,0.615,0.298,0.060,1.32e-5
+E150,small,Enschede,0.380,4.1e-4,0.175,0.093,0.131,3.22e-7
+E150,small,Enschede,0.380,4.1e-4,0.235,0.079,0.119,1.45e-6
+Bms19,medium,Baskarp,0.132,8.0e-5,0.440,0.149,0.096,2.16e-6
+Bms19,medium,Baskarp,0.132,8.0e-5,0.480,0.159,0.093,2.35e-6
+Bms19,medium,Baskarp,0.132,8.0e-5,0.520,0.170,0.095,2.58e-6
+Bms19,medium,Baskarp,0.132,8.0e-5,0.690,0.179,0.088,2.95e-6
+Bms19,medium,Baskarp,0.132,8.0e-5,0.940,0.187,0.089,3.31e-6
+Bms19,medium,Baskarp,0.132,8.0e-5,1.135,0.203,0.108,3.81e-6
+Ims20,medium,Itterbeck330,0.283,3.9e-4,0.647,0.175,0.059,1.14e-5
+Ims20,medium,Itterbeck330,0.283,3.9e-4,0.742,0.162,0.038,1.17e-5
+Ims20,medium,Itterbeck330,0.283,3.9e-4,1.197,0.170,0.065,1.54e-5
